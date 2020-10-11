@@ -1,3 +1,8 @@
+'''
+sign_dict : 토큰 추출 대상
+stop_dict : 토크 추출 제외 대상
+'''
+
 sign_dict = {
 	"일반명사":"NNG",
 	"고유명사":"NNP",

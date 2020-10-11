@@ -1,8 +1,7 @@
 '''
-Tokenizer Module
+Noun Extractor Module
 - konlpy 형태소 분석기를 상속받아 
   부가 전처리 메소드를 추가로 작성하였음.
-해당 토크나이저 
 '''
 import re
 from konlpy.tag import Mecab
@@ -17,7 +16,7 @@ from token_dict import (single_stop,
                         except_set)
 
 
-class Tokenizer(Mecab):
+class NounEx(Mecab):
     '''Tokenizer Class'''
     
     def __init__(self):
@@ -36,7 +35,7 @@ class Tokenizer(Mecab):
             u"\U0001F680-\U0001F6FF" # transport & map symbols
             u"\U0001F1E0-\U0001F1FF" # flags (iOS)
         "]+", flags=re.UNICODE)
-        super(Tokenizer, self).__init__()
+        super(NounEx, self).__init__()
 
     def get_tk(self, string):
         '''
@@ -129,6 +128,14 @@ class Tokenizer(Mecab):
     def _is_valid(self, word, m_type):
         '''
         각 형태소의 토큰화 통과 여부 검증
+        - 예외처리 특수 키워드(except_set)일 경우, PASS
+        - 키워드가 endwith_stop로 끝날 경우, NO
+        - 단어의 길이가 15자 이상일 경우, NO
+        - 비속어, 무의미한 단어(token_stop)일 경우, NO
+        - 해당 형태소가 추출 제외 대상일 경우, NO
+        - 형태소 타입이 SL(영문)이면서, 영어 불용어일 경우, NO
+        - 형태소 타입이 SL(영문)이면서, 2자 이하일 경우, NO
+        - 한영 문자 외에 다른 문자가 섞여 있을 경우, NO
         '''
         if word in self.except_set:
             return True
@@ -163,4 +170,5 @@ class Tokenizer(Mecab):
         return word
 
     def _except_doc_process(self, tokens, doc_list):
+        '''문서 전체에 대한 예외처리'''
         return tokens
