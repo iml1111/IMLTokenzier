@@ -6,8 +6,8 @@ Noun Extractor Module
 import re
 from konlpy.tag import Mecab
 from nltk.corpus import stopwords
-from morph_info import sign_dict
-from token_dict import (single_stop,
+from .morph_info import sign_dict
+from .token_dict import (single_stop,
                         token_stop,
                         endwith_remove_list,
                         endwith_stop,
@@ -89,8 +89,10 @@ class NounEx(Mecab):
         '''형태소 분석이 잘못된 토큰에 대해서 붙여주는 작업 수행'''
         for idx, data in enumerate(morphs):
             for ex in self.ex_morphs:
-                if self._is_ex_morphs(morphs[idx:idx + len(ex["morphs"])],
-                                      ex["morphs"]):
+                if self._is_ex_morphs(
+                    morphs[idx:idx + len(ex["morphs"])],
+                    ex["morphs"]
+                ):
                     morphs[idx] = (ex['word'], 'PASS')
                     for i in range(idx + 1, idx + len(ex["morphs"])):
                         morphs[i] = ('X', 'NO')

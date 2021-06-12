@@ -1,4 +1,4 @@
-from tokenizer import NounEx
+from NounEx.tokenizer import NounEx
 
 obj = NounEx()
 msg = "사람은 밥을 먹는다"
