@@ -26,12 +26,12 @@ class Tokenizer(Mecab):
         self.eng_stop = set(stopwords.words('english')) # 영어 불용어
         self.stop_single = stop_single # 단일 자모음 제외셋
         self.stop_tokens = stop_tokens # 한글 불용어
-        self.endwith_remove_list = erl # 마지막 공통 부분 제거 단어
+        self.endwith_pat = "|".join(erl) # 마지막 공통 부분 제거 단어
         self.stop_endwith = stop_endwith # 끝부분 매칭 불용어
         self.same_words = same_words # 동일어 사전
         self.morphs_combine = morphs_combine  # 형태소 합성 사전
         self.combine_lenghs = combine_lenghs # 합성 사전 길이 셋
-        self.noun_morphs = noun_morphs # 명사 범주 형태소 사전
+        self.noun_morphs = noun_morphs.values() # 명사 범주 형태소 사전
         self.valid_words = valid_words # true valid 키워드
 
         super(Tokenizer, self).__init__()
@@ -48,8 +48,8 @@ class Tokenizer(Mecab):
         idx, morphs_len = 0, len(morphs)
 
         while idx < morphs_len:
-            combine_available, length = self._combine_valid(morphs, idx, morphs_len)
-            if combine_available:
+            available, length = self.__combine_valid(morphs, idx, morphs_len)
+            if available:
                 morphs[idx] = (
                     "".join([i[0] for i in 
                     morphs[idx:idx+length]]), 
@@ -61,7 +61,7 @@ class Tokenizer(Mecab):
                 
         return morphs
 
-    def _combine_valid(self, src, src_idx, src_len):
+    def __combine_valid(self, src, src_idx, src_len):
         '''해당 형태소 셋이 합성 가능한지 검증'''
         for tgt_len in self.combine_lenghs:
             
@@ -85,12 +85,12 @@ class Tokenizer(Mecab):
         '''
         result = []
         for word, m_type in morphs:
-            if self._is_valid(word, m_type):
-                result += [self._except_token_process(word)]
+            if self.__is_valid(word, m_type):
+                result.append(self.__except_token_process(word))
 
         return result
 
-    def _is_valid(self, word, m_type):
+    def __is_valid(self, word, m_type):
         '''
         각 형태소의 토큰화 통과 여부 검증
         - 예외처리 특수 키워드(valid_words)일 경우, PASS
@@ -104,32 +104,24 @@ class Tokenizer(Mecab):
         '''
         if word in self.valid_words:
             return True
-        for i in self.stop_endwith:
-            if word.endswith(i):
-                return False
-        if len(word) >= 15:
-            return False
-        if word in self.stop_tokens:
-            return False
-        if set(word) & self.stop_single:
-            return False
-        if m_type not in self.noun_morphs.values():
-            return False
-        if m_type == 'SL' and word in self.eng_stop:
-            return False
-        if m_type == 'SL' and len(word) <= 2:
-            return False
-        if m_type not in ['SH', 'SL'] and \
-           word != re.sub(r'[^ ㄱ-ㅣ가-힣|a-z]+', ' ', word):
-           return False
-        return True
 
-    def _except_token_process(self, word):
+        return (
+            not any(word.endswith(i) for i in self.stop_endwith)
+            and len(word) <= 15
+            and word not in self.stop_tokens
+            and (not set(word) & self.stop_single)
+            and m_type in self.noun_morphs
+            and not (m_type == 'SL' and word in self.eng_stop)
+            and not (m_type == 'SL' and len(word) <= 2)
+        )
+
+    def __except_token_process(self, word):
         '''토큰으로 등록되기 전, 변경 작업 수행'''
-        for i in self.endwith_remove_list:
-            if word != i and word.endswith(i):
-                word = word[:-len(i)]
-                break
+        
+        # 접미사 제거
+        word = re.sub(self.endwith_pat, "", word)
+        # 동일어 변환
         if word in self.same_words:
             word = same_words[word]
+        
         return word

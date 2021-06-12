@@ -12,7 +12,7 @@ noun_morphs = {
 	"영어":"SL",
 	"분석불능범주":"NA",
 	"한자":"SH",
-	"예외키워드":"PASS",
+	"합성명사":"PASS",
 }
 
 stop_morphs = {
