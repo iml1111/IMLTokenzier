@@ -14,6 +14,7 @@ from .token_dict import (
     stop_endwith,
     same_words,
     morphs_combine,
+    combine_lenghs,
     valid_words,
 )
 
@@ -29,6 +30,7 @@ class Tokenizer(Mecab):
         self.stop_endwith = stop_endwith # 끝부분 매칭 불용어
         self.same_words = same_words # 동일어 사전
         self.morphs_combine = morphs_combine  # 형태소 합성 사전
+        self.combine_lenghs = combine_lenghs # 합성 사전 길이 셋
         self.noun_morphs = noun_morphs # 명사 범주 형태소 사전
         self.valid_words = valid_words # true valid 키워드
 
@@ -36,41 +38,44 @@ class Tokenizer(Mecab):
 
     def get_nouns(self, text):
         '''정제된 문서에 대한 토큰화 모듈'''
-        try:
-            morphs = self.pos(text)
-            morphs = self._except_morphs_process(morphs)
-            tokens = self._morphs_validation(morphs)
+        tokens = self.pos(text)
+        tokens = self._combine_morphs_process(tokens)
+        tokens = self._morphs_validation(tokens)
+        return tokens
 
-        except Exception as e:
-            print("Tokenize Error:", e)
-            return None
+    def _combine_morphs_process(self, morphs):
+        '''형태소 분석이 잘못된 토큰을 다시 붙여주는 작업'''
+        idx, morphs_len = 0, len(morphs)
 
-        return self._except_doc_process(tokens, text)
-
-    def _except_morphs_process(self, morphs):
-        '''형태소 분석이 잘못된 토큰에 대해서 붙여주는 작업 수행'''
-        for idx, data in enumerate(morphs):
-            for ex in self.morphs_combine:
-                if self._is_ex_morphs(
-                    morphs[idx:idx + len(ex["morphs"])],
-                    ex["morphs"]
-                ):
-                    morphs[idx] = (ex['word'], 'PASS')
-                    for i in range(idx + 1, idx + len(ex["morphs"])):
-                        morphs[i] = ('X', 'NO')
-                    break
+        while idx < morphs_len:
+            combine_available, length = self._combine_valid(morphs, idx, morphs_len)
+            if combine_available:
+                morphs[idx] = (
+                    "".join([i[0] for i in 
+                    morphs[idx:idx+length]]), 
+                    'PASS'
+                )
+                del morphs[idx + 1: idx + length]
+                idx += length
+            idx += 1
+                
         return morphs
 
-    def _is_ex_morphs(self, data, ex):
-        '''해당 형태소가 잘못된 분석인지 탐색'''
-        if len(data) != len(ex):
-            return False
-        
-        for i in range(len(ex)):
-            if data[i][0] != ex[i][0]:
-                return False
-        
-        return True
+    def _combine_valid(self, src, src_idx, src_len):
+        '''해당 형태소 셋이 합성 가능한지 검증'''
+        for tgt_len in self.combine_lenghs:
+            
+            if src_len - src_idx < tgt_len:
+                break
+            
+            src_tuple = tuple([
+                token[0] for token in 
+                src[src_idx: src_idx + tgt_len]]
+            )
+            if src_tuple in self.morphs_combine:
+                return True, tgt_len
+
+        return False, None
 
     def _morphs_validation(self, morphs):
         '''
@@ -128,7 +133,3 @@ class Tokenizer(Mecab):
         if word in self.same_words:
             word = same_words[word]
         return word
-
-    def _except_doc_process(self, tokens, doc_list):
-        '''문서 전체에 대한 예외처리'''
-        return tokens
