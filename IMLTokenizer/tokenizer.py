@@ -7,16 +7,18 @@ import re
 from konlpy.tag import Mecab
 from nltk.corpus import stopwords
 from .morph_info import sign_dict
-from .token_dict import (single_stop,
-                        token_stop,
-                        endwith_remove_list,
-                        endwith_stop,
-                        mean_inter_dict,
-                        ex_morphs,
-                        except_set)
+from .token_dict import (
+    single_stop,
+    token_stop,
+    endwith_remove_list,
+    endwith_stop,
+    mean_inter_dict,
+    ex_morphs,
+    except_set
+)
 
 
-class NounEx(Mecab):
+class Tokenizer(Mecab):
     '''Tokenizer Class'''
     
     def __init__(self):
@@ -35,23 +37,16 @@ class NounEx(Mecab):
             u"\U0001F680-\U0001F6FF" # transport & map symbols
             u"\U0001F1E0-\U0001F1FF" # flags (iOS)
         "]+", flags=re.UNICODE)
-        super(NounEx, self).__init__()
+        super(Tokenizer, self).__init__()
 
-    def get_tk(self, string):
-        '''
-        문자열 to 토큰화 메소드
+    def get_tk(self, text, refine_text=True):
+        """
+        Get Noun Tokens
+        """
+        refined_or_text = self._refine_text(text) if refine_text else text
+        return self._tokenize(refined_or_text)
 
-        Params
-        - string : 인풋 문자열
-
-        Returns
-        - tokens : 토큰 리스트
-        '''
-        cleaned_docs = self._doc_cleaning(string)
-        tokens = self._tokenize(cleaned_docs)
-        return tokens
-
-    def _doc_cleaning(self, doc, length=3_000, low=True):
+    def _refine_text(self, doc, length=3_000, low=True):
         '''
         문서 정제 및 정규화
         - length : 리스트 단일 원소당 최대 문자열 길이

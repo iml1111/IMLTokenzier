@@ -11,8 +11,7 @@ Konlpy-mecab 클래스를 상속받아 구현하였고, 형태소 분석기는 1
 **Supported: Xenial(16.04.3 LTS), Bionic(18.04.3 LTS), Disco(19.04), Eoan(19.10)**
 
 ```
-$ ./requirements/mecab_install.sh
-$ pip install ./requirements/requirements.txt
+$ ./requirements/requirements.sh
 ```
 
 
