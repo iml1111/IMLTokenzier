@@ -36,8 +36,19 @@ class Tokenizer(Mecab):
 
         super(Tokenizer, self).__init__()
 
+    def get_tokens(self, text):
+        """
+        토크나이즈 모듈
+        """
+        tokens = self.pos(text)
+        tokens = self._combine_morphs_process(tokens)
+        tokens = self._morphs_validation(tokens, noun_only=False)
+        return tokens
+
     def get_nouns(self, text):
-        '''정제된 문서에 대한 토큰화 모듈'''
+        """
+        의미를 가진 토큰 한정 토크나이즈 모듈(주로 명사)
+        """
         tokens = self.pos(text)
         tokens = self._combine_morphs_process(tokens)
         tokens = self._morphs_validation(tokens)
@@ -48,7 +59,9 @@ class Tokenizer(Mecab):
         idx, morphs_len = 0, len(morphs)
 
         while idx < morphs_len:
-            available, length = self.__combine_valid(morphs, idx, morphs_len)
+            available, length = self.__combine_valid(
+                morphs, idx, morphs_len
+            )
             if available:
                 morphs[idx] = (
                     "".join([i[0] for i in 
@@ -56,7 +69,7 @@ class Tokenizer(Mecab):
                     'PASS'
                 )
                 del morphs[idx + 1: idx + length]
-                idx += length
+                morphs_len -= length - 1
             idx += 1
                 
         return morphs
@@ -77,21 +90,23 @@ class Tokenizer(Mecab):
 
         return False, None
 
-    def _morphs_validation(self, morphs):
-        '''
+    def _morphs_validation(self, morphs, noun_only=True):
+        """
         각 형태소에 대한 토큰화 검증
         - 토큰화 통과 여부 결정
         - 토큰화시, 단어 변경 여부 결정
-        '''
+        """
         result = []
         for word, m_type in morphs:
-            if self.__is_valid(word, m_type):
-                result.append(self.__except_token_process(word))
+            if self.__is_valid(word, m_type, noun_only):
+                refined = self.__except_token_process(word)
+                if refined:
+                    result.append(refined)
 
         return result
 
-    def __is_valid(self, word, m_type):
-        '''
+    def __is_valid(self, word, m_type, noun_only):
+        """
         각 형태소의 토큰화 통과 여부 검증
         - 예외처리 특수 키워드(valid_words)일 경우, PASS
         - 키워드가 endwith_stop로 끝날 경우, NO
@@ -101,7 +116,7 @@ class Tokenizer(Mecab):
         - 형태소 타입이 SL(영문)이면서, 영어 불용어일 경우, NO
         - 형태소 타입이 SL(영문)이면서, 2자 이하일 경우, NO
         - 한영 문자 외에 다른 문자가 섞여 있을 경우, NO
-        '''
+        """
         if word in self.valid_words:
             return True
 
@@ -110,7 +125,7 @@ class Tokenizer(Mecab):
             and len(word) <= 15
             and word not in self.stop_tokens
             and (not set(word) & self.stop_single)
-            and m_type in self.noun_morphs
+            and (m_type in self.noun_morphs if noun_only else True)
             and not (m_type == 'SL' and word in self.eng_stop)
             and not (m_type == 'SL' and len(word) <= 2)
         )
